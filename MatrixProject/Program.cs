@@ -1,64 +1,81 @@
 ﻿using System;
-using System.Collections;
+using System.Collections.Generic;
 
 namespace MatrixProject
 {
     class Program
     {
-        static int tourNumber = 0; static double totalPath = 0;
+        static int tourNumber = 0; 
+        static double totalPath = 0;
+        static int height = 100; 
+        static int width = 100; 
+        static int n = 20;
+        static Random r = new Random();
 
         static void Main(string[] args)
         {
-            int height = 100; int width = 100; int n = 20;
-            Random r = new Random();
-            int [] visitedIndexes = new int[n];
-            double [][] pointsArray = generatePoints(n, r, width, height);
-            generateDistanceMatrix(n, pointsArray);
+            double [][] pointsArray = generatePoints(); // Random points' values
+            List<int> startingIndexes = new List<int>();
+            Console.WriteLine("\nDISTANCE MATRIX");
+            Console.WriteLine("---------------");
+            generateDistanceMatrix(pointsArray);
+            Console.WriteLine("\n");
 
-            int startingIndex = r.Next(n);
-            double[] startingPoint = pointsArray[startingIndex];
-            double[][] selectedPoints = new double[n][];
-            selectedPoints[0] = startingPoint;
-            double minDistance = Math.Sqrt(Math.Pow(width, 2) + Math.Pow(height, 2));
-            selectedPoints = findNearestNeighbour(pointsArray ,r, n, startingPoint, selectedPoints, minDistance, width, height);
+            // 10 defa dönecek --> 10 farklı başlangıç noktası için
+            for (int i = 0; i < 10; i++)
+            {
+                tourNumber = 0;
+                totalPath = 0;
+                int startingIndex = r.Next(n);
+                
+                // Changes the starting index if it is used
+                while (startingIndexes.Contains(startingIndex))
+                {
+                    startingIndex = r.Next(n);
+                }
+               
+                startingIndexes.Add(startingIndex);
+                double[] startingPoint = pointsArray[startingIndex];
+                double[][] selectedPoints = new double[n][];
+                selectedPoints[0] = startingPoint;
+                tourNumber++;
+                selectedPoints = findNearestNeighbour(pointsArray, startingPoint, selectedPoints);
+
+                Console.WriteLine("\n");
+                Console.WriteLine("Tur Sayısı: {0}", i + 1);
+
+                int[] visitedIndexes = findVisitedIndex(selectedPoints, pointsArray);
+                Console.WriteLine("\nUğranılan Noktalar");
+                Console.WriteLine("------------------");
+                
+                for (int j = 0; j < visitedIndexes.Length; j++)
+                {
+                    Console.Write("{0}  ", visitedIndexes[j]);
+                }
+                
+                Console.WriteLine("\n\nToplam Yol Uzunluğu = {0:0.00}", totalPath);
+                Console.WriteLine("");
+            }
             
-            Console.WriteLine();
-            Console.WriteLine();
-            foreach(double[] element in selectedPoints)
-            {
-                Console.WriteLine("{0:0.00} {1:0.00}", element[0], element[1]);
-            }
-            Console.WriteLine(totalPath);
-
-            Console.WriteLine();
-
-            generateDistanceMatrix(n, selectedPoints);
-
-            Console.WriteLine();
-            Console.WriteLine();
-            visitedIndexes = findVisitedIndex(selectedPoints, pointsArray, visitedIndexes);
-            for (int i = 0; i < visitedIndexes.Length; i++)
-            {
-                Console.WriteLine(visitedIndexes[i]);
-            }
         }
 
-        static double[][] generatePoints(int n, Random r, int width, int height)
+        // Generates random x and y values
+        static double[][] generatePoints()
         {
             double[][] points = new double[n][];
 
+            Console.WriteLine("\nRandom Generated Points");
+            Console.WriteLine("------------------------");
             for (int i = 0; i < n; ++i)
             {
                 double[] coordinates = {r.NextDouble() * width, r.NextDouble() * height};
                 points[i] = coordinates;
-                Console.WriteLine("{0:0.00} {1:0.00}", coordinates[0], coordinates[1]);
-                  
+                Console.WriteLine("X değeri: {0:0.00}  Y değeri: {1:0.00}", coordinates[0], coordinates[1]);
             }
             return points;
-
         }
 
-        static void generateDistanceMatrix(int n, double [][] pointsArray)
+        static void generateDistanceMatrix(double [][] pointsArray)
         {
             double[,] distanceMatrix = new double[n, n];
 
@@ -74,7 +91,6 @@ namespace MatrixProject
                     distanceMatrix[i, j] = calculateEuclideanDistance(x1, x2, y1, y2);
                 }
             }
-
             for (int i = 0; i < n; ++i)
             {
                 Console.WriteLine();
@@ -82,14 +98,12 @@ namespace MatrixProject
                 {
                     Console.Write(String.Format("{0:0.00} \t", distanceMatrix[i, j]));
                 }
-            }
-            
+            }          
         }
-
         
-        static double[][] findNearestNeighbour(double [][] pointsArray, Random r, int n, double [] point,
-            double [][] selectedPoints, double minDistance, int width, int height)
+        static double[][] findNearestNeighbour(double [][] pointsArray, double [] point, double [][] selectedPoints)
         {
+            double minDistance = Math.Sqrt(Math.Pow(width, 2) + Math.Pow(height, 2)); // It is the maximum distance of two points in given space that could be
 
             double x1 = point[0]; double x2 = 0;
             double y1 = point[1]; double y2 = 0;
@@ -112,20 +126,20 @@ namespace MatrixProject
                 totalPath += minDistance;
                 selectedPoints[tourNumber] = selectedPoint;
                 tourNumber++; 
-                minDistance = Math.Sqrt(Math.Pow(width, 2) + Math.Pow(height, 2));
-                findNearestNeighbour(pointsArray, r, n, selectedPoint, selectedPoints, minDistance, width, height);
+                findNearestNeighbour(pointsArray, selectedPoint, selectedPoints);
             }
 
             return selectedPoints;
         }
         
-        
+        // Calculates distance between two points
         static double calculateEuclideanDistance(double x1, double x2, double y1, double y2)
         {
             double d = Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
             return d;
         }
 
+        // Checks if the given point is inside the selected points
         static Boolean isHave(double [] point, double[][] selectedPoints)
         {
             for (int i = 0; i < selectedPoints.Length; ++i)
@@ -135,12 +149,14 @@ namespace MatrixProject
                     return true;
                 }
             }
-
             return false;
         }
 
-        static int[] findVisitedIndex(double[][] selectedPoints, double[][] pointsArray, int[] visitedIndexes)
+        // Finds the indexes of selected points from points array
+        static int[] findVisitedIndex(double[][] selectedPoints, double[][] pointsArray)
         {
+            int[] visitedIndexes = new int[n];
+
             for (int i = 0; i < pointsArray.Length; i++)
             {
                 for (int j = 0; j < pointsArray.Length; j++)
@@ -151,7 +167,6 @@ namespace MatrixProject
                     }
                 }
             }
-
             return visitedIndexes;
         }
     }
